@@ -6,14 +6,15 @@
 struct symbol {
     char name[20];
     char type[20];
-    int scope;
-    int line;
+    char scope[10];     // global or local
+    int memory;         // memory location
+    char value[20];     // value
     struct symbol *next;
 };
 
 struct symbol *head = NULL;
 
-/* Insert a symbol into the table */
+/* Insert a symbol */
 void insert() {
     struct symbol *newnode;
     newnode = (struct symbol *)malloc(sizeof(struct symbol));
@@ -24,11 +25,14 @@ void insert() {
     printf("Enter Data Type: ");
     scanf("%s", newnode->type);
 
-    printf("Enter Scope (0 = global, 1 = local): ");
-    scanf("%d", &newnode->scope);
+    printf("Enter Scope (global/local): ");
+    scanf("%s", newnode->scope);
 
-    printf("Enter Line Number: ");
-    scanf("%d", &newnode->line);
+    printf("Enter Memory Location: ");
+    scanf("%d", &newnode->memory);
+
+    printf("Enter Value: ");
+    scanf("%s", newnode->value);
 
     newnode->next = head;
     head = newnode;
@@ -36,7 +40,7 @@ void insert() {
     printf("Symbol Inserted Successfully!\n");
 }
 
-/* Display the symbol table */
+/* Display the Symbol Table */
 void display() {
     struct symbol *temp = head;
 
@@ -45,42 +49,55 @@ void display() {
         return;
     }
 
-    printf("\n-------------------------------------------------\n");
-    printf("Name\tType\tScope\tLine\n");
-    printf("-------------------------------------------------\n");
+    printf("\n-------------------------------------------------------------\n");
+    printf("Name\tType\tScope\tMemory\tValue\n");
+    printf("-------------------------------------------------------------\n");
 
     while (temp != NULL) {
-        printf("%s\t%s\t%d\t%d\n",
+        printf("%s\t%s\t%s\t%d\t%s\n",
                temp->name,
                temp->type,
                temp->scope,
-               temp->line);
+               temp->memory,
+               temp->value);
         temp = temp->next;
     }
 }
 
-/* Search a symbol */
-void search() {
+/* Delete a Symbol */
+void deleteSymbol() {
     char key[20];
-    struct symbol *temp = head;
+    struct symbol *temp = head, *prev = NULL;
 
-    printf("Enter Symbol Name to Search: ");
+    if (head == NULL) {
+        printf("Symbol Table is Empty!\n");
+        return;
+    }
+
+    printf("Enter Symbol Name to Delete: ");
     scanf("%s", key);
 
-    while (temp != NULL) {
-        if (strcmp(temp->name, key) == 0) {
-            printf("Symbol Found!\n");
-            printf("Name: %s\nType: %s\nScope: %d\nLine: %d\n",
-                   temp->name,
-                   temp->type,
-                   temp->scope,
-                   temp->line);
-            return;
-        }
+    /* If first node */
+    if (strcmp(head->name, key) == 0) {
+        temp = head;
+        head = head->next;
+        free(temp);
+        printf("Symbol Deleted Successfully!\n");
+        return;
+    }
+
+    while (temp != NULL && strcmp(temp->name, key) != 0) {
+        prev = temp;
         temp = temp->next;
     }
 
-    printf("Symbol Not Found!\n");
+    if (temp == NULL) {
+        printf("Symbol Not Found!\n");
+    } else {
+        prev->next = temp->next;
+        free(temp);
+        printf("Symbol Deleted Successfully!\n");
+    }
 }
 
 /* Main Function */
@@ -91,7 +108,7 @@ int main() {
         printf("\n===== SYMBOL TABLE MENU =====\n");
         printf("1. Insert Symbol\n");
         printf("2. Display Symbol Table\n");
-        printf("3. Search Symbol\n");
+        printf("3. Delete Symbol\n");
         printf("4. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
@@ -99,7 +116,7 @@ int main() {
         switch (choice) {
             case 1: insert(); break;
             case 2: display(); break;
-            case 3: search(); break;
+            case 3: deleteSymbol(); break;
             case 4: exit(0);
             default: printf("Invalid Choice!\n");
         }
