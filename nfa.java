@@ -1,105 +1,85 @@
-import java.util.*;
+    import java.util.Scanner;
 
-public class NFA_TokenRecognition {
+public class NFA_TokenRecognizer {
 
-    static Set<String> keywords = new HashSet<>(Arrays.asList(
-            "int", "float", "double", "char", "if", "else", "while", "for", "return"
-    ));
+    /* ---------- NFA for Identifier ---------- */
+    static boolean isIdentifier(String str) {
+        int i = 0;
 
-    static Set<String> operators = new HashSet<>(Arrays.asList(
-            "+", "-", "*", "/", "=", "==", "<", ">", "<=", ">="
-    ));
+        // q0: must start with a letter
+        if (!Character.isLetter(str.charAt(i)))
+            return false;
 
-    static Set<Character> separators = new HashSet<>(Arrays.asList(
-            '(', ')', '{', '}', ';', ','
-    ));
-
-    // NFA for Identifier
-    static boolean isIdentifier(String token) {
-        int state = 0;
-
-        for (char ch : token.toCharArray()) {
-            switch (state) {
-                case 0:
-                    if (Character.isLetter(ch))
-                        state = 1;
-                    else
-                        return false;
-                    break;
-
-                case 1:
-                    if (Character.isLetterOrDigit(ch))
-                        state = 1;
-                    else
-                        return false;
-                    break;
-            }
+        // q1: letters or digits allowed
+        for (i = 1; i < str.length(); i++) {
+            if (!Character.isLetterOrDigit(str.charAt(i)))
+                return false;
         }
-        return state == 1;
+        return true;
     }
 
-    // NFA for Integer Literal
-    static boolean isNumber(String token) {
-        int state = 0;
+    /* ---------- NFA for Integer Constant ---------- */
+    static boolean isConstant(String str) {
 
-        for (char ch : token.toCharArray()) {
-            switch (state) {
-                case 0:
-                    if (Character.isDigit(ch))
-                        state = 1;
-                    else
-                        return false;
-                    break;
-
-                case 1:
-                    if (Character.isDigit(ch))
-                        state = 1;
-                    else
-                        return false;
-                    break;
-            }
+        // digit+
+        for (int i = 0; i < str.length(); i++) {
+            if (!Character.isDigit(str.charAt(i)))
+                return false;
         }
-        return state == 1;
+        return true;
     }
 
+    /* ---------- NFA for Operators ---------- */
+    static boolean isOperator(String str) {
+        String[] operators = {
+                "+", "-", "*", "/", "=", "==", "<", ">", "<=", ">="
+        };
+
+        for (String op : operators) {
+            if (str.equals(op))
+                return true;
+        }
+        return false;
+    }
+
+    /* ---------- MAIN FUNCTION ---------- */
     public static void main(String[] args) {
 
         Scanner sc = new Scanner(System.in);
+        String input;
 
-        System.out.println("Enter source code (single line):");
-        String input = sc.nextLine();
+        System.out.println("vaitheeswaran");
+        System.out.println("==========================================");
 
-        StringTokenizer st = new StringTokenizer(
-                input, " +-*/=<>();{},", true
-        );
+        while (true) {
+            System.out.print("\nEnter a token (type 'exit' to stop): ");
+            input = sc.nextLine();
 
-        System.out.println("\n--- Token Recognition Output ---");
+            // exit condition
+            if (input.equals("exit")) {
+                System.out.println("Program terminated.");
+                break;
+            }
 
-        while (st.hasMoreTokens()) {
-            String token = st.nextToken().trim();
-
-            if (token.isEmpty())
+            // epsilon handling
+            if (input.equals("()") || input.equals("null")) {
+                System.out.println("Epsilon (Empty String) Recognized");
                 continue;
+            }
 
-            if (keywords.contains(token)) {
-                System.out.println(token + " : Keyword");
-            }
-            else if (operators.contains(token)) {
-                System.out.println(token + " : Operator");
-            }
-            else if (token.length() == 1 && separators.contains(token.charAt(0))) {
-                System.out.println(token + " : Separator");
-            }
-            else if (isNumber(token)) {
-                System.out.println(token + " : Numeric Literal");
-            }
-            else if (isIdentifier(token)) {
-                System.out.println(token + " : Identifier");
-            }
-            else {
-                System.out.println(token + " : Invalid Token");
-            }
+            // token recognition
+            if (isIdentifier(input))
+                System.out.println("Valid Identifier");
+            else if (isConstant(input))
+                System.out.println("Valid Constant");
+            else if (isOperator(input))
+                System.out.println("Valid Operator");
+            else
+                System.out.println("Invalid Token");
+                System.out.println("===================================================");
+            
         }
+
         sc.close();
     }
 }
