@@ -1,0 +1,9 @@
+sudo apt install bison
+
+sudo apt install flex
+
+
+lex lex.l
+yacc -d parser.y
+gcc lex.yy.c y.tab.c -o syntaxcheck
+./syntaxcheck
