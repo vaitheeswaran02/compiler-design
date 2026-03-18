@@ -1,0 +1,29 @@
+
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+
+int main()
+{
+    char exp[20];
+    int a,b;
+
+    printf("Enter expression: ");
+    scanf("%s",exp);
+
+    printf("Original Expression: %s\n",exp);
+
+    if(sscanf(exp,"%d+%d",&a,&b)==2)
+        printf("Constant Folding Result: %d\n",a+b);
+
+    if(strstr(exp,"*2"))
+        printf("Strength Reduction: x*2 → x+x\n");
+
+    if(strstr(exp,"+0"))
+        printf("Algebraic Transformation: x+0 → x\n");
+
+    if(strstr(exp,"*1"))
+        printf("Algebraic Transformation: x*1 → x\n");
+
+    return 0;
+}
