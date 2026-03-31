@@ -63,3 +63,12 @@ int main() {
     fclose(fp);
     return 0;
 }
+
+INPUT: 
+
+this input in the input.txt file 
+int() main{
+    int a=10;
+    float b=a+5;
+}
+
