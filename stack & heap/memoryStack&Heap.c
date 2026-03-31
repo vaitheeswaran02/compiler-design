@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MEMORY_SIZE 50
 
@@ -10,14 +11,26 @@ int HP = 0;             // Heap Pointer starts from bottom
 
 void displayMemory()
 {
-    printf("\nMemory Layout:\n");
-    printf("Index\tValue\n");
+    printf("\n================ MEMORY LAYOUT ================\n");
+    printf("+--------+--------+------------+\n");
+    printf("| Index  | Value  | Segment    |\n");
+    printf("+--------+--------+------------+\n");
 
     for(int i = 0; i < MEMORY_SIZE; i++)
     {
-        printf("%d\t%d\n", i, memory[i]);
+        char segment[10];
+
+        if(i < HP)
+            strcpy(segment, "Heap");
+        else if(i >= SP)
+            strcpy(segment, "Stack");
+        else
+            strcpy(segment, "Free");
+
+        printf("| %-6d | %-6d | %-10s |\n", i, memory[i], segment);
     }
 
+    printf("+--------+--------+------------+\n");
     printf("Heap Pointer (HP): %d\n", HP);
     printf("Stack Pointer (SP): %d\n", SP);
 }
@@ -33,7 +46,7 @@ void pushStack(int value)
     SP--;
     memory[SP] = value;
 
-    printf("Pushed %d into stack\n", value);
+    printf("\nPushed %d into stack\n", value);
     displayMemory();
 }
 
@@ -45,7 +58,8 @@ void popStack()
         return;
     }
 
-    printf("Popped %d from stack\n", memory[SP]);
+    printf("\nPopped %d from stack\n", memory[SP]);
+    memory[SP] = 0;   // clear value (better view)
     SP++;
 
     displayMemory();
@@ -60,7 +74,7 @@ void allocateHeap(int value)
     }
 
     memory[HP] = value;
-    printf("Allocated %d in heap\n", value);
+    printf("\nAllocated %d in heap\n", value);
     HP++;
 
     displayMemory();
@@ -75,7 +89,7 @@ void freeHeap()
     }
 
     HP--;
-    printf("Freed heap value %d\n", memory[HP]);
+    printf("\nFreed heap value %d\n", memory[HP]);
     memory[HP] = 0;
 
     displayMemory();
@@ -86,9 +100,9 @@ void recursiveCall(int n)
     if(n == 0)
         return;
 
-    pushStack(n);      // simulate activation record
+    pushStack(n);
     recursiveCall(n-1);
-    popStack();        // function return
+    popStack();
 }
 
 int main()
