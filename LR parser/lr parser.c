@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #define MAX 100
 
@@ -14,28 +14,26 @@ int n, tCount = 0, ntCount = 0;
 
 // States
 char states[50][50][50];
+int stateItemCount[50];
 int stateCount = 0;
 
 // ACTION & GOTO
 char action[50][20][20];
 int goToTable[50][20];
 
+// Stack
+int stack[100], top = -1;
+
+// Start symbols
 char startSymbol;
 char augmentedStart = 'Z';
 
 // ================= UTILITY =================
 
-int containsState(char state[][50], int size, char items[][50], int itemCount) {
-    for (int i = 0; i < size; i++) {
-        int match = 1;
-        for (int j = 0; j < itemCount; j++) {
-            if (strcmp(state[i], items[j]) != 0) {
-                match = 0;
-                break;
-            }
-        }
-        if (match) return 1;
-    }
+int containsItem(char items[][50], int count, char *str) {
+    for (int i = 0; i < count; i++)
+        if (strcmp(items[i], str) == 0)
+            return 1;
     return 0;
 }
 
@@ -50,8 +48,7 @@ void closure(char items[][50], int *count) {
 
         for (int i = 0; i < *count; i++) {
 
-            char *item = items[i];
-            char *dot = strchr(item, '.');
+            char *dot = strchr(items[i], '.');
 
             if (dot && *(dot + 1)) {
 
@@ -59,7 +56,8 @@ void closure(char items[][50], int *count) {
 
                 if (isupper(symbol)) {
 
-                    for (int p = 0; p < n; p++) {
+                    for (int p = 0; p < ntCount; p++) {
+
                         if (nonTerminals[p] == symbol) {
 
                             for (int k = 0; k < prodCount[p]; k++) {
@@ -67,12 +65,7 @@ void closure(char items[][50], int *count) {
                                 char newItem[50];
                                 sprintf(newItem, "%c->.%s", symbol, grammar[p][k]);
 
-                                int exists = 0;
-                                for (int x = 0; x < *count; x++)
-                                    if (strcmp(items[x], newItem) == 0)
-                                        exists = 1;
-
-                                if (!exists) {
+                                if (!containsItem(items, *count, newItem)) {
                                     strcpy(items[*count], newItem);
                                     (*count)++;
                                     changed = 1;
@@ -115,33 +108,56 @@ void goToFunc(char state[][50], int count, char symbol,
     closure(result, resCount);
 }
 
-// ================= CANONICAL =================
+// ================= CANONICAL COLLECTION =================
 
-void buildStates() {
+int stateExists(char newState[][50], int newCount) {
+    for (int i = 0; i < stateCount; i++) {
+        if (stateItemCount[i] != newCount) continue;
 
-    char start[50][50];
+        int match = 1;
+        for (int j = 0; j < newCount; j++) {
+            if (!containsItem(states[i], stateItemCount[i], newState[j])) {
+                match = 0;
+                break;
+            }
+        }
+        if (match) return i;
+    }
+    return -1;
+}
+
+void buildCanonicalCollection() {
+
+    char startState[50][50];
     int count = 1;
 
-    sprintf(start[0], "%c->.%c", augmentedStart, startSymbol);
-
-    closure(start, &count);
+    sprintf(startState[0], "%c->.%c", augmentedStart, startSymbol);
+    closure(startState, &count);
 
     for (int i = 0; i < count; i++)
-        strcpy(states[stateCount][i], start[i]);
+        strcpy(states[0][i], startState[i]);
 
-    stateCount++;
+    stateItemCount[0] = count;
+    stateCount = 1;
 
     for (int i = 0; i < stateCount; i++) {
 
         char symbols[50];
         int symCount = 0;
 
-        for (int j = 0; j < 50; j++) {
-            if (strlen(states[i][j]) == 0) break;
+        for (int j = 0; j < stateItemCount[i]; j++) {
 
             char *dot = strchr(states[i][j], '.');
             if (dot && *(dot + 1)) {
-                symbols[symCount++] = *(dot + 1);
+
+                char sym = *(dot + 1);
+                int found = 0;
+
+                for (int k = 0; k < symCount; k++)
+                    if (symbols[k] == sym) found = 1;
+
+                if (!found)
+                    symbols[symCount++] = sym;
             }
         }
 
@@ -150,11 +166,16 @@ void buildStates() {
             char newState[50][50];
             int newCount;
 
-            goToFunc(states[i], 50, symbols[s], newState, &newCount);
+            goToFunc(states[i], stateItemCount[i], symbols[s], newState, &newCount);
 
-            if (newCount > 0) {
+            int exists = stateExists(newState, newCount);
+
+            if (newCount > 0 && exists == -1) {
+
                 for (int k = 0; k < newCount; k++)
                     strcpy(states[stateCount][k], newState[k]);
+
+                stateItemCount[stateCount] = newCount;
                 stateCount++;
             }
         }
@@ -163,7 +184,7 @@ void buildStates() {
 
 // ================= TABLE =================
 
-void buildTable() {
+void buildParsingTable() {
 
     for (int i = 0; i < stateCount; i++) {
 
@@ -176,27 +197,64 @@ void buildTable() {
 
     for (int i = 0; i < stateCount; i++) {
 
-        for (int j = 0; j < 50; j++) {
-
-            if (strlen(states[i][j]) == 0) break;
+        for (int j = 0; j < stateItemCount[i]; j++) {
 
             char *item = states[i][j];
             char *dot = strchr(item, '.');
 
+            // SHIFT
             if (dot && *(dot + 1)) {
 
                 char sym = *(dot + 1);
 
-                if (!isupper(sym)) {
-                    sprintf(action[i][0], "S%d", i + 1);
-                }
+                char nextState[50][50];
+                int newCount;
 
-            } else {
-                if (item[0] == augmentedStart) {
-                    strcpy(action[i][tCount - 1], "ACC");
-                } else {
+                goToFunc(states[i], stateItemCount[i], sym, nextState, &newCount);
+
+                int index = stateExists(nextState, newCount);
+
+                if (!isupper(sym)) {
+                    int tIndex = -1;
                     for (int t = 0; t < tCount; t++)
-                        sprintf(action[i][t], "R(%s)", item);
+                        if (terminals[t] == sym) tIndex = t;
+
+                    if (tIndex != -1)
+                        sprintf(action[i][tIndex], "S%d", index);
+                } else {
+                    for (int nt = 0; nt < ntCount; nt++)
+                        if (nonTerminals[nt] == sym)
+                            goToTable[i][nt] = index;
+                }
+            }
+
+            // REDUCE
+            else {
+
+                if (item[0] == augmentedStart) {
+                    for (int t = 0; t < tCount; t++)
+                        if (terminals[t] == '$')
+                            strcpy(action[i][t], "ACC");
+                } 
+                else {
+
+                    // 🔥 FIX: remove dot
+                    char prod[50];
+                    strcpy(prod, item);
+
+                    for (int x = 0; prod[x]; x++) {
+                        if (prod[x] == '.') {
+                            for (int y = x; prod[y]; y++)
+                                prod[y] = prod[y + 1];
+                            break;
+                        }
+                    }
+
+                    for (int t = 0; t < tCount; t++) {
+                        if (strcmp(action[i][t], "-") == 0) {
+                            sprintf(action[i][t], "R(%s)", prod);
+                        }
+                    }
                 }
             }
         }
@@ -207,9 +265,8 @@ void buildTable() {
 
 void printTable() {
 
-    printf("\nLR(0) PARSING TABLE:\n");
+    printf("\nLR(0) PARSING TABLE:\nState\t");
 
-    printf("State\t");
     for (int t = 0; t < tCount; t++)
         printf("%c\t", terminals[t]);
 
@@ -223,6 +280,76 @@ void printTable() {
             printf("%s\t", action[i][t]);
 
         printf("\n");
+    }
+}
+
+// ================= PARSER =================
+
+void parse(char input[]) {
+
+    stack[++top] = 0;
+    int i = 0;
+
+    printf("\nSTACK\tINPUT\tACTION\n");
+
+    while (1) {
+
+        int state = stack[top];
+        char curr = input[i];
+
+        int tIndex = -1;
+        for (int t = 0; t < tCount; t++)
+            if (terminals[t] == curr) tIndex = t;
+
+        char *act = (tIndex != -1) ? action[state][tIndex] : NULL;
+
+        printf("[");
+        for (int k = 0; k <= top; k++)
+            printf("%d ", stack[k]);
+        printf("]\t%s\t%s\n", input + i, act);
+
+        if (act == NULL || strcmp(act, "-") == 0) {
+            printf("REJECT\n");
+            return;
+        }
+
+        if (strcmp(act, "ACC") == 0) {
+            printf("ACCEPT\n");
+            return;
+        }
+
+        if (act[0] == 'S') {
+            int next = atoi(act + 1);
+            stack[++top] = next;
+            i++;
+        }
+
+        else if (act[0] == 'R') {
+
+            char lhs = act[2];
+            char rhs[20];
+            strcpy(rhs, act + 5);
+            rhs[strlen(rhs) - 1] = '\0';
+
+            if (strcmp(rhs, "#") != 0)
+                for (int j = 0; j < strlen(rhs); j++)
+                    top--;
+
+            int currState = stack[top];
+
+            int ntIndex = -1;
+            for (int nt = 0; nt < ntCount; nt++)
+                if (nonTerminals[nt] == lhs) ntIndex = nt;
+
+            int nextState = goToTable[currState][ntIndex];
+
+            if (nextState == -1) {
+                printf("REJECT\n");
+                return;
+            }
+
+            stack[++top] = nextState;
+        }
     }
 }
 
@@ -250,6 +377,7 @@ int main() {
         char *token = strtok(rhs, "|");
 
         while (token != NULL) {
+
             strcpy(grammar[i][prodCount[i]++], token);
 
             for (int k = 0; k < strlen(token); k++) {
@@ -265,24 +393,21 @@ int main() {
 
     startSymbol = nonTerminals[0];
 
-    // Add augmented grammar
-    strcpy(grammar[n][0], "");
+    // Augmented grammar
     grammar[n][0][0] = startSymbol;
-    prodCount[n++] = 1;
+    grammar[n][0][1] = '\0';
     nonTerminals[ntCount++] = augmentedStart;
+    prodCount[n++] = 1;
 
-    buildStates();
-    buildTable();
+    buildCanonicalCollection();
+    buildParsingTable();
     printTable();
+
+    char input[50];
+    printf("\nEnter input string (end with $): ");
+    scanf("%s", input);
+
+    parse(input);
 
     return 0;
 }
-
-
-output:
-Enter number of productions: 3
-Enter productions (use # for epsilon):
-S->CC
-C->cC|d
-
-Enter input string (end with $): ccd$
